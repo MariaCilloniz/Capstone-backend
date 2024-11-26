@@ -26,14 +26,15 @@ const analyzeSubreddit = async (req, res) => {
         }
 
         const { subreddit } = req.params;
+        
         const requestedLimit = parseInt(req.query.limit);
-        let limit = !isNaN(requestedLimit) && requestedLimit > 0 
-            ? Math.min(requestedLimit, MAX_LIMIT) 
+        let limit = !isNaN(requestedLimit) && requestedLimit > 0
+            ? Math.min(requestedLimit, MAX_LIMIT)
             : DEFAULT_LIMIT;
 
-            const response = await redditAPI.get(`/r/${subreddit}/new.json`, {
-                params: { limit }
-            });
+        const response = await redditAPI.get(`/r/${subreddit}/new.json`, {
+            params: { limit }
+        });
 
         const posts = response.data.data.children.map(post => ({
             id: post.data.id,
@@ -54,7 +55,7 @@ const analyzeSubreddit = async (req, res) => {
                     await new Promise(resolve => setTimeout(resolve, index * 100));
 
                     const text = `${post.title} ${post.content}`.trim();
-                    
+
                     if (!text) {
                         return {
                             ...post,
@@ -81,11 +82,15 @@ const analyzeSubreddit = async (req, res) => {
                         profanity_score: analysisResponse.data.attributeScores.PROFANITY?.summaryScore?.value
                     };
 
-                    await knex('subreddit_analyses').insert(analysisData);
+                    const [result] = await knex('subreddit_analyses')
+                        .insert(analysisData);
+                    
+                    const analysisId = result;
 
                     return {
                         ...post,
-                        analysis: analysisResponse.data
+                        analysis: analysisResponse.data,
+                        analysisId: analysisId
                     };
 
                 } catch (error) {
@@ -97,7 +102,7 @@ const analyzeSubreddit = async (req, res) => {
                     return {
                         ...post,
                         analysis: null,
-                        error: error.response?.status === 429 
+                        error: error.response?.status === 429
                             ? 'Rate limit exceeded for content analysis'
                             : `Failed to analyze content: ${error.response?.data?.error?.message || error.message}`
                     };
@@ -116,6 +121,7 @@ const analyzeSubreddit = async (req, res) => {
             } : null,
             analyzed_posts: analyzedPosts.map(post => ({
                 id: post.id,
+                analysisId: post.analysisId,
                 title: post.title,
                 content: post.content,
                 author: post.author,
@@ -134,14 +140,14 @@ const analyzeSubreddit = async (req, res) => {
             data: error.response?.data,
             message: error.message
         });
-        
+
         if (error.response?.status === 404) {
-            return res.status(404).json({ 
+            return res.status(404).json({
                 error: 'Subreddit not found'
             });
         }
-        
-        res.status(500).json({ 
+
+        res.status(500).json({
             error: 'Error analyzing subreddit',
             message: error.response?.data?.error || error.message,
             details: process.env.NODE_ENV === 'development' ? {
@@ -160,4 +166,4 @@ function shuffleArray(array) {
     return array;
 }
 
-export {analyzeSubreddit};
+export { analyzeSubreddit };
