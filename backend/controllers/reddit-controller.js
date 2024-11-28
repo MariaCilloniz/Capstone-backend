@@ -26,7 +26,7 @@ const analyzeSubreddit = async (req, res) => {
         }
 
         const { subreddit } = req.params;
-        
+
         const requestedLimit = parseInt(req.query.limit);
         let limit = !isNaN(requestedLimit) && requestedLimit > 0
             ? Math.min(requestedLimit, MAX_LIMIT)
@@ -47,7 +47,6 @@ const analyzeSubreddit = async (req, res) => {
         }));
 
         const shuffledPosts = shuffleArray([...posts]).slice(0, limit);
-
 
         const analyzedPosts = await Promise.all(
             shuffledPosts.map(async (post, index) => {
