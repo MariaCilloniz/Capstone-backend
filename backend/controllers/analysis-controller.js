@@ -68,7 +68,6 @@ const analyzeText = async (req, res) => {
                 threat: analysisData.threat_score,
                 profanity: analysisData.profanity_score
             },
-            // analysis: response.data
         });
 
 
